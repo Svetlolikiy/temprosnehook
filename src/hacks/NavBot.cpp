@@ -241,37 +241,6 @@ bool getAmmo(bool force = false)
 std::vector<Vector> sniper_spots;
 // Used for time between refreshing sniperspots
 static Timer refresh_sniperspots_timer{};
-void refreshSniperSpots()
-{
-    if (!refresh_sniperspots_timer.test_and_set(60000))
-        return;
-
-    sniper_spots.clear();
-
-    // Vector of exposed spots to nav to in case we find no sniper spots
-    std::vector<Vector> exposed_spots;
-
-    // Search all nav areas for valid sniper spots
-    for (auto &area : navparser::NavEngine::getNavFile()->m_areas)
-    {
-        for (auto &hiding_spot : area.m_hidingSpots)
-        {
-            // Spots actually marked for sniping
-            if (hiding_spot.IsGoodSniperSpot() || hiding_spot.IsIdealSniperSpot() || hiding_spot.HasGoodCover())
-            {
-                sniper_spots.emplace_back(hiding_spot.m_pos);
-                continue;
-            }
-
-            if (hiding_spot.IsExposed())
-                exposed_spots.emplace_back(hiding_spot.m_pos);
-        }
-    }
-
-    // If we have no sniper spots, just use nav areas marked as exposed. They're good enough for sniping.
-    if (sniper_spots.empty() && !exposed_spots.empty())
-        sniper_spots = exposed_spots;
-}
 
 std::pair<CachedEntity *, float> getNearestPlayerDistance()
 {
@@ -1348,13 +1317,6 @@ bool escapeDanger()
 {
     if (!*escape_danger)
         return false;
-    // Don't escape while we have the intel
-    if (!*escape_danger_ctf_cap)
-    {
-        auto flag_carrier = flagcontroller::getCarrier(g_pLocalPlayer->team);
-        if (flag_carrier == LOCAL_E)
-            return false;
-    }
     // Priority too high
     if (navparser::NavEngine::current_priority > danger)
         return false;
